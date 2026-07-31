@@ -25,11 +25,15 @@ impl Guest for Component {
         while let (StreamResult::Complete(_), value) = stream.read(Vec::with_capacity(1)).await {
             if let [value] = value.as_slice() {
                 println!(
-                    "{} line count: {}; retriever: {}; deferrers: {}",
+                    "{} line count: {}; retriever: {}{}",
                     value.url,
                     value.count,
                     value.retriever,
-                    value.deferrers.join(", ")
+                    if value.deferrers.is_empty() {
+                        String::new()
+                    } else {
+                        format!("; deferrers: {}", value.deferrers.join(", "))
+                    }
                 );
             }
         }
