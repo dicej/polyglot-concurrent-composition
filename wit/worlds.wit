@@ -1,0 +1,35 @@
+package demo:demo;
+
+interface line-count {
+  use wasi:http/types@0.3.0.{error-code};
+
+  /// Represents the content line count for a given URL, plus relevant metadata.
+  record line-count {
+    /// The URL from which the content was retrieved.
+    url: string,
+    /// The number of lines in the content.
+    count: u64,
+    /// The name of the component that retrieved the content.
+    retriever: string,
+    /// The names of the components which deferred retrieval to another component, if any.
+    deferrers: list<string>
+  }
+
+  count-lines: async func(urls: list<string>) -> tuple<stream<line-count>, future<result<_, error-code>>>;
+}
+
+world top {
+  include wasi:cli/command@0.3.0;
+  import line-count;
+}
+
+world middle {
+  import wasi:http/client@0.3.0;
+  import line-count;
+  export line-count;
+}
+
+world bottom {
+  import wasi:http/client@0.3.0;
+  export line-count;
+}
