@@ -1,24 +1,21 @@
+middles = \
+	middle-rust/target/wasm32-wasip2/release/middle.wasm \
+	middle-python/component.wasm \
+	middle-javascript/component.wasm \
+
 .PHONY: build
-build: top bottom middle-rust middle-python/component.wasm
-	wac plug \
-		top/target/wasm32-wasip2/release/top.wasm \
-		--plug middle-rust/target/wasm32-wasip2/release/middle.wasm \
-		-o composed0.wasm
-	wac plug \
-		composed0.wasm \
-		--plug middle-python/component.wasm \
-		-o composed1.wasm
-	wac plug \
-		composed1.wasm \
-		--plug bottom/target/wasm32-wasip2/release/bottom.wasm \
-		-o composed.wasm
+build: top bottom middle-rust middle-python/component.wasm middle-javascript/component.wasm
+	cp top/target/wasm32-wasip2/release/top.wasm composed.wasm
+	for component in $(middles) bottom/target/wasm32-wasip2/release/bottom.wasm; do \
+		wac plug composed.wasm --plug $$component -o composed.wasm; done
 
 .PHONY: run
 run: build
-	wasmtime run -Shttp composed.wasm \
+	WASMTIME_BACKTRACE_DETAILS=1 wasmtime run -Shttp composed.wasm \
 		"https://bytecodealliance.org/" \
 		"https://rust-lang.org/" \
-		"https://www.python.org/"
+		"https://www.python.org/" \
+		"https://tc39.es"
 
 .PHONY: top
 top:
@@ -30,6 +27,10 @@ middle-rust:
 
 middle-python/component.wasm:
 	bash middle-python/build.sh
+
+middle-javascript/component.wasm:
+	cd middle-javascript && \
+		cargo run --release --manifest-path ../../componentize-js/Cargo.toml -- -d ../wit -w "demo:demo/middle" componentize component.js -o component.wasm
 
 .PHONY: bottom
 bottom:
