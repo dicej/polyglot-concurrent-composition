@@ -16,7 +16,7 @@ wit_bindgen::generate!({
     merge_structurally_equal_types: true,
 });
 
-pub async fn count_lines(url_string: String) -> Result<LineCount, ErrorCode> {
+pub async fn count_lines(url_string: String, retriever: &str) -> Result<LineCount, ErrorCode> {
     let url = Url::parse(&url_string).map_err(|v| {
         ErrorCode::InternalError(Some(format!("error parsing URL `{url_string}`: {v:?}")))
     })?;
@@ -70,7 +70,7 @@ pub async fn count_lines(url_string: String) -> Result<LineCount, ErrorCode> {
     Ok(LineCount {
         url: url_string,
         count,
-        retriever: "bottom".into(),
+        retriever: retriever.into(),
         deferrers: Vec::new(),
     })
 }

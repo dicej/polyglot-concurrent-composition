@@ -28,7 +28,9 @@ impl Guest for Component {
             let mut mpsc_tx = mpsc_tx.clone();
             async move {
                 for url in to_retrieve {
-                    _ = mpsc_tx.send(line_count::count_lines(url).await).await;
+                    _ = mpsc_tx
+                        .send(line_count::count_lines(url, "rust").await)
+                        .await;
                 }
             }
         });

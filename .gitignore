@@ -3,3 +3,7 @@ target
 bindings
 venv
 __pycache__
+wasi_*
+wasi_*
+demo_*
+wit_exports.go

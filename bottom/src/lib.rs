@@ -19,7 +19,7 @@ impl Guest for Component {
 
         let mut results = urls
             .into_iter()
-            .map(line_count::count_lines)
+            .map(|url| line_count::count_lines(url, "bottom"))
             .collect::<FuturesUnordered<_>>();
 
         wit_bindgen::spawn_local(async move {

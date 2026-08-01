@@ -2,9 +2,10 @@ middles = \
 	middle-rust/target/wasm32-wasip2/release/middle.wasm \
 	middle-python/component.wasm \
 	middle-javascript/component.wasm \
+	middle-go/component.wasm \
 
 .PHONY: build
-build: top bottom middle-rust middle-python/component.wasm middle-javascript/component.wasm
+build: top bottom middle-rust middle-python/component.wasm middle-javascript/component.wasm middle-go/component.wasm
 	cp top/target/wasm32-wasip2/release/top.wasm composed.wasm
 	for component in $(middles) bottom/target/wasm32-wasip2/release/bottom.wasm; do \
 		wac plug composed.wasm --plug $$component -o composed.wasm; done
@@ -15,7 +16,8 @@ run: build
 		"https://bytecodealliance.org/" \
 		"https://rust-lang.org/" \
 		"https://www.python.org/" \
-		"https://tc39.es"
+		"https://tc39.es" \
+		"https://go.dev"
 
 .PHONY: top
 top:
@@ -30,7 +32,15 @@ middle-python/component.wasm:
 
 middle-javascript/component.wasm:
 	cd middle-javascript && \
-		cargo run --release --manifest-path ../../componentize-js/Cargo.toml -- -d ../wit -w "demo:demo/middle" componentize component.js -o component.wasm
+		componentize-js -d ../wit -w "demo:demo/middle" componentize component.js -o component.wasm
+
+middle-go/component.wasm:
+	cd middle-go && \
+		go mod tidy && \
+		cp go.mod hide.go.mod && \
+		go tool componentize-go -d ../wit -w "demo:demo/middle" bindings && \
+		mv hide.go.mod go.mod && \
+		go tool componentize-go -d ../wit -w "demo:demo/middle" build -o component.wasm
 
 .PHONY: bottom
 bottom:
