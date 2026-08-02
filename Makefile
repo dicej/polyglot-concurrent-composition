@@ -10,15 +10,6 @@ build: top bottom middle-rust middle-python/component.wasm middle-javascript/com
 	for component in $(middles) bottom/target/wasm32-wasip2/release/bottom.wasm; do \
 		wac plug composed.wasm --plug $$component -o composed.wasm; done
 
-.PHONY: run
-run: build
-	WASMTIME_BACKTRACE_DETAILS=1 wasmtime run -Shttp composed.wasm \
-		"https://bytecodealliance.org/" \
-		"https://rust-lang.org/" \
-		"https://www.python.org/" \
-		"https://tc39.es" \
-		"https://go.dev"
-
 .PHONY: top
 top:
 	cargo build --manifest-path top/Cargo.toml --release --target wasm32-wasip2

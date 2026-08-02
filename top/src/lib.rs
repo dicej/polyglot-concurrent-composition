@@ -1,5 +1,5 @@
 use {
-    demo::demo::line_count, exports::wasi::cli::run::Guest, wasi::cli::environment,
+    demo::demo::transformer, exports::wasi::cli::run::Guest, wasi::cli::environment,
     wit_bindgen::StreamResult,
 };
 
@@ -15,32 +15,25 @@ impl Guest for Component {
     async fn run() -> Result<(), ()> {
         let arguments = environment::get_arguments();
         if arguments.len() == 1 {
-            eprintln!("please specify one or more URLs");
+            eprintln!("please specify one or more arguments");
             return Err(());
         }
 
-        let (mut stream, future) =
-            line_count::count_lines(arguments.into_iter().skip(1).collect()).await;
-
-        while let (StreamResult::Complete(_), value) = stream.read(Vec::with_capacity(1)).await {
-            if let [value] = value.as_slice() {
-                println!(
-                    "{} line count: {}; retriever: {}{}",
-                    value.url,
-                    value.count,
-                    value.retriever,
-                    if value.deferrers.is_empty() {
-                        String::new()
-                    } else {
-                        format!("; deferrers: {}", value.deferrers.join(", "))
-                    }
-                );
+        let (mut input_tx, input_rx) = wit_stream::new();
+        wit_bindgen::spawn_local(async move {
+            for argument in arguments.into_iter().skip(1) {
+                if input_tx.write_one(argument).await.is_some() {
+                    break;
+                }
             }
-        }
+        });
 
-        if let Err(error) = future.await {
-            eprintln!("error retrieving line counts: {error:?}");
-            return Err(());
+        let mut output_rx = transformer::transform(input_rx).await;
+        while let (StreamResult::Complete(_), values) = output_rx.read(Vec::with_capacity(1)).await
+        {
+            for value in values {
+                println!("{value}");
+            }
         }
 
         Ok(())

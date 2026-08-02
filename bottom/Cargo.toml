@@ -7,8 +7,6 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-futures = "0.3.33"
 wit-bindgen = { version = "0.60.0", features = ["async-spawn"] }
-line-count = { path = "../line-count" }
 
 [workspace]

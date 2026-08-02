@@ -4,41 +4,28 @@ This is a demonstration of how to compose WebAssembly components written in a
 variety of programming languages using concurrent inter-component function calls
 and streaming.
 
-This example is a CLI application which accepts one or more URLs as arguments,
-retrieves the URLs concurrently, and prints the number of lines received in the
-response body for each URL.  The application is a composition of several
-components written in various languages:
+This example is a CLI application which accepts one or more strings as arguments
+and transforms them, printing the results to standard output.  It's built as a
+composition of the following components:
 
-- `top` (Rust): exports `wasi:cli/run` and imports `line-count`, an interface
-  which contains an asynchronous function for retrieving the line counts for a
-  list of URLs.  This component calls that function and prints the stream of
-  results as they arrive.
+- `top`: exports `wasi:cli/run` and imports `transformer`, an interface
+  which contains an asynchronous function that accepts a stream of strings and
+  returns a stream of transformed strings.  This component calls that function
+  and prints the results as they arrive.
 
-- `middle-rust` (Rust): exports _and_ imports `line-count`, and imports
-  `wasi:http/client`.  When called, it retrieves and counts the lines for any
-  URLs with `rust-lang.org` as the authority, deferring any other URLs to the
-  `line-count` import.  All the results (direct and deferred) are returned via a
-  `stream` of `line-count` records.
+- `middle-rust`: exports _and_ imports `transformer`.  When called, forwards the
+  stream to the imported function, but also transforms each string in the input
+  and output streams before forwarding them to the callee and the caller,
+  respectively.
   
-- `middle-python` (Python): Like `middle-rust`, except handles any
-  `www.python.org` URLs itself, deferring other URLs to the `line-count` import.
-  Note that, as of this writing `www.python.org` always returns gzipped
-  responses, so the "line count" is really just a count of byte values equal to
-  10 (the ASCII newline character) that happen to appear in the compressed
-  stream.
+- `middle-python`: As above, but implemented in Python.
   
-- `middle-javascript` (JavaScript): Like `middle-rust`, except handles any
-  `tc39.es` URLs itself, deferring other URLs to the `line-count` import.
+- `middle-javascript`: As above, but implemented in JavaScript.
     
-- `middle-go` (JavaScript): Like `middle-rust`, except handles any
-  `go.dev` URLs itself, deferring other URLs to the `line-count` import.
+- `middle-go`: As above, but implemented in Go.
   
-- `bottom` (Rust): exports `line-count` and imports `wasi:http/client`.  When
-  called, it retrieves and counts the lines for all the URLs it receives.
-  
-Whenever a component retrieves a result itself, it includes its name in the
-result, and whenever it defers to the next component in line it adds itself to
-the lest of deferrers.
+- `bottom`: exports `transformer` and returns the input stream unmodified as the
+  output stream.
 
 ## Building and Running
 
@@ -67,26 +54,28 @@ export WASI_SDK_PATH=$(pwd)/wasi-sdk-30.0-arm64-linux
 
 Once you have Rust and WASI-SDK, you can get Wasmtime, wac, and componentize-js using `cargo`:
 
+> **Note:** As of this writing, the `componentize-js` build fails on MacOS,
+> apparently due to `https://bugzilla.mozilla.org/show_bug.cgi?id=1844694` :(
+
 ```
 cargo install --version 47.0.2 wasmtime-cli
 cargo install --version 0.10.1 wac-cli
 cargo install --git https://github.com/dicej/componentize-js --rev bdd7c3d5
 ```
 
-Once you have all the prereqs, you should be able to build and run using:
+Once you have all the prereqs, you should be able to build and run using e.g.:
 
 ```
-make run
+make build
+wasmtime run composed.wasm foo bar baz
 ```
 
-If all goes well, the output should end something like this:
+If all goes well, the output should look like this:
 
 ```
-https://www.python.org/ line count: 35; retriever: python; deferrers: rust
-https://bytecodealliance.org/ line count: 461; retriever: bottom; deferrers: go, javascript, python, rust
-https://go.dev line count: 1402; retriever: go; deferrers: javascript, python, rust
-https://tc39.es line count: 937; retriever: javascript; deferrers: python, rust
-https://rust-lang.org/ line count: 390; retriever: rust
+ʕ◔ϖ◔ʔ🐒🐍🦀fooʕ◔ϖ◔ʔ🐒🐍🦀
+ʕ◔ϖ◔ʔ🐒🐍🦀barʕ◔ϖ◔ʔ🐒🐍🦀
+ʕ◔ϖ◔ʔ🐒🐍🦀bazʕ◔ϖ◔ʔ🐒🐍🦀
 ```
 
 If you have any trouble, please open an issue!
